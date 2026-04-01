@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#1a5c4f">
+<title>CardioTrack — Control de Colesterol</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>❤️</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f8f6f3;--bg2:#ffffff;--bg3:#f0ebe4;--bg4:#e8e2d9;
+  --border:rgba(26,92,79,0.12);--border2:rgba(26,92,79,0.2);
+  --text:#2d3748;--text2:#4a5568;--text3:#718096;
+  --primary:#1a5c4f;--primary-light:#2d8a74;--primary-bg:rgba(26,92,79,0.08);
+  --accent:#d97706;--accent-bg:rgba(217,119,6,0.1);
+  --good:#059669;--good-bg:rgba(5,150,105,0.1);--good-b:rgba(5,150,105,0.3);
+  --warn:#d97706;--warn-bg:rgba(217,119,6,0.1);--warn-b:rgba(217,119,6,0.3);
+  --bad:#dc2626;--bad-bg:rgba(220,38,38,0.1);--bad-b:rgba(220,38,38,0.3);
+  --blue:#3b82f6;--blue-bg:rgba(59,130,246,0.1);
+  --purple:#8b5cf6;--purple-bg:rgba(139,92,246,0.1);
+  --radius:10px;--radius-lg:14px;
+  --font:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --shadow:0 2px 12px rgba(26,92,79,0.08);
+  --shadow-lg:0 8px 32px rgba(26,92,79,0.12);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-size:14px;-webkit-tap-highlight-color:transparent;}
+.shell{display:flex;min-height:100vh;}
+
+/* ═══ SIDEBAR ═══ */
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.5rem 0;position:fixed;top:0;left:0;bottom:0;z-index:10;box-shadow:var(--shadow);}
+.logo{padding:0 1.5rem 1.5rem;border-bottom:1px solid var(--border);margin-bottom:1rem;}
+.logo-icon{font-size:28px;margin-bottom:4px;}
+.logo-title{font-size:15px;font-weight:700;color:var(--primary);letter-spacing:-0.3px;}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.5rem;cursor:pointer;font-size:13px;color:var(--text2);border-left:3px solid transparent;transition:all 0.15s;user-select:none;}
+.nav-item:hover{color:var(--primary);background:var(--primary-bg);}
+.nav-item.active{color:var(--primary);border-left-color:var(--primary);background:var(--primary-bg);font-weight:600;}
+.nav-item .ico{font-size:16px;width:22px;text-align:center;}
+.nav-badge{margin-left:auto;background:var(--accent-bg);color:var(--accent);font-size:9px;padding:2px 6px;border-radius:100px;font-weight:700;}
+.nav-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:1rem;}
+
+/* ═══ MAIN ═══ */
+.main{margin-left:220px;padding:2rem;flex:1;max-width:1000px;}
+.page-header{margin-bottom:1.75rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.page-title{font-size:20px;font-weight:700;color:var(--primary);}
+.page-sub{font-size:12px;color:var(--text3);margin-top:4px;}
+.view{display:none;}.view.active{display:block;}
+
+/* ═══ CARDS & METRICS ═══ */
+.metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:1.5rem;}
+.mc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow);transition:transform 0.15s,box-shadow 0.15s;}
+.mc:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.mc-lbl{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;}
+.mc-val{font-size:28px;font-weight:700;color:var(--text);}
+.mc-val.good{color:var(--good);}.mc-val.warn{color:var(--warn);}.mc-val.bad{color:var(--bad);}
+.mc-unit{font-size:12px;color:var(--text3);font-weight:400;margin-left:2px;}
+.mc-change{font-size:11px;margin-top:6px;display:flex;align-items:center;gap:4px;}
+.mc-change.up{color:var(--bad);}.mc-change.down{color:var(--good);}
+
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:1.5rem;box-shadow:var(--shadow);}
+.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.card-sub{font-size:11px;color:var(--text3);margin-bottom:1rem;}
+
+/* ═══ FORMS ═══ */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.fg-full{grid-column:1/-1;}
+.fgrp{display:flex;flex-direction:column;gap:6px;}
+.flbl{font-size:12px;color:var(--text3);font-weight:500;}
+.fgrp input,.fgrp select,.fgrp textarea{background:var(--bg);border:1.5px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:14px;padding:10px 12px;width:100%;outline:none;font-family:var(--font);transition:border-color 0.15s,box-shadow 0.15s;}
+.fgrp input:focus,.fgrp select:focus,.fgrp textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-bg);}
+.fgrp select option{background:var(--bg2);}
+.fgrp textarea{resize:vertical;min-height:80px;}
+
+/* ═══ BUTTONS ═══ */
+.btn{padding:10px 20px;border-radius:var(--radius);font-size:13px;font-weight:600;cursor:pointer;border:1.5px solid var(--border);background:var(--bg2);color:var(--text);transition:all 0.15s;touch-action:manipulation;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.btn:hover{background:var(--bg3);}
+.btn:active{transform:scale(0.98);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:white;}
+.btn-primary:hover{background:var(--primary-light);}
+.btn-accent{background:var(--accent-bg);border-color:var(--accent);color:var(--accent);}
+.btn-accent:hover{background:rgba(217,119,6,0.15);}
+.btn-good{background:var(--good-bg);border-color:var(--good);color:var(--good);}
+.btn-good:hover{background:rgba(5,150,105,0.15);}
+.btn-bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad);}
+.btn-bad:hover{background:rgba(220,38,38,0.15);}
+.btn-sm{font-size:11px;padding:6px 12px;}
+.btn-icon{padding:8px;min-width:36px;}
+
+/* ═══ TABLE ═══ */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--bg2);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;padding:12px 14px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);}
+td{padding:12px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--primary-bg);}
+
+/* ═══ BADGES ═══ */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:100px;font-size:11px;font-weight:600;}
+.badge-good{background:var(--good-bg);color:var(--good);border:1px solid var(--good-b);}
+.badge-warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-b);}
+.badge-bad{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad-b);}
+
+/* ═══ REFERENCE RANGES ═══ */
+.ref-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow);}
+.ref-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ref-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.ref-row:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+.ref-label{font-size:12px;color:var(--text2);width:100px;flex-shrink:0;}
+.ref-bar{flex:1;height:8px;background:var(--bg3);border-radius:4px;position:relative;overflow:hidden;}
+.ref-fill{height:100%;border-radius:4px;transition:width 0.3s;}
+.ref-value{font-size:12px;font-weight:600;width:70px;text-align:right;}
+
+/* ═══ ALERTS ═══ */
+.alert{padding:1rem 1.25rem;border-radius:var(--radius);margin-bottom:1rem;display:flex;align-items:flex-start;gap:12px;line-height:1.5;}
+.alert-icon{font-size:18px;flex-shrink:0;}
+.alert-content{flex:1;}
+.alert-title{font-size:13px;font-weight:600;margin-bottom:2px;}
+.alert-text{font-size:12px;opacity:0.9;}
+.alert-good{background:var(--good-bg);border:1px solid var(--good-b);color:var(--good);}
+.alert-warn{background:var(--warn-bg);border:1px solid var(--warn-b);color:var(--warn);}
+.alert-bad{background:var(--bad-bg);border:1px solid var(--bad-b);color:var(--bad);}
+.alert-info{background:var(--blue-bg);border:1px solid rgba(59,130,246,0.3);color:var(--blue);}
+
+/* ═══ SETTINGS ═══ */
+.settings-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;max-width:500px;margin-bottom:1.25rem;box-shadow:var(--shadow);}
+.settings-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px;}
+.export-btns{display:flex;gap:10px;flex-wrap:wrap;}
+
+/* ═══ MODAL ═══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(26,92,79,0.4);z-index:100;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;width:min(500px,100%);max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;}
+.modal-title{font-size:16px;font-weight:700;color:var(--primary);}
+.modal-sub{font-size:12px;color:var(--text3);margin-top:3px;}
+.modal-close{background:none;border:none;font-size:24px;color:var(--text3);cursor:pointer;padding:0;line-height:1;}
+.modal-close:hover{color:var(--bad);}
+
+/* ═══ EMPTY STATE ═══ */
+.empty{text-align:center;padding:3rem 1rem;color:var(--text3);}
+.empty-icon{font-size:48px;margin-bottom:1rem;opacity:0.5;}
+.empty-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.empty-text{font-size:12px;}
+
+/* ═══ TOAST ═══ */
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:var(--text);color:white;padding:12px 24px;border-radius:var(--radius);font-size:13px;font-weight:500;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:opacity 0.3s;}
+.toast.show{opacity:1;}
+
+/* ═══ MOBILE NAV ═══ */
+.mobile-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border);z-index:20;display:none;justify-content:space-around;padding:8px 0 calc(8px + env(safe-area-inset-bottom));box-shadow:0 -4px 20px rgba(0,0,0,0.08);}
+.mn-item{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 12px;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500;border-radius:var(--radius);transition:color 0.15s;min-width:60px;}
+.mn-item.active{color:var(--primary);}
+.mn-item .mn-ico{font-size:20px;line-height:1;}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  .sidebar{display:none;}
+  .mobile-nav{display:flex;}
+  .main{margin-left:0;padding:1rem 1rem calc(5rem + env(safe-area-inset-bottom));max-width:100%;}
+  .page-header{flex-direction:column;gap:0.75rem;margin-bottom:1.25rem;}
+  .page-title{font-size:18px;}
+  .form-grid{grid-template-columns:1fr;}
+  .fg-full{grid-column:1;}
+  .metrics{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .mc{padding:1rem;}
+  .mc-val{font-size:24px;}
+  .chart-card{padding:1rem;}
+  .tbl-wrap{margin:0 -1rem;border-radius:0;border-left:none;border-right:none;}
+  th,td{padding:10px 12px;font-size:12px;}
+  .settings-card{max-width:100%;}
+  .export-btns{flex-direction:column;}
+  .export-btns .btn{width:100%;}
+  .modal{width:100%;padding:1.25rem;border-radius:var(--radius-lg) var(--radius-lg) 0 0;max-height:85vh;margin-top:auto;}
+  .modal-overlay{align-items:flex-end;padding:0;}
+  .ref-row{flex-wrap:wrap;}
+  .ref-label{width:100%;margin-bottom:4px;}
+}
+
+@media(min-width:769px){.mobile-nav{display:none;}}
+
+@media(hover:none) and (pointer:coarse){
+  .btn{min-height:44px;}
+  .btn-sm{min-height:36px;}
+  .nav-item{min-height:44px;}
+  .mn-item{min-height:54px;}
+  select,input{min-height:44px;}
+}
+
+/* ═══ PRINT ═══ */
+@media print{
+  .sidebar,.mobile-nav,.btn{display:none!important;}
+  .main{margin-left:0;padding:1rem;}
+  .chart-card,.mc,.ref-card,.tbl-wrap{break-inside:avoid;box-shadow:none;border:1px solid #ddd;}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SIDEBAR
+     ═══════════════════════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">❤️</div>
+    <div class="logo-title">CardioTrack</div>
+    <div class="logo-sub">Control de colesterol</div>
+  </div>
+  <nav>
+    <div class="nav-item active" onclick="nav('dash')"><span class="ico">📊</span><span>Dashboard</span></div>
+    <div class="nav-item" onclick="nav('nueva')"><span class="ico">➕</span><span>Nueva analítica</span></div>
+    <div class="nav-item" onclick="nav('hist')"><span class="ico">📋</span><span>Historial</span></div>
+    <div class="nav-item" onclick="nav('ref')"><span class="ico">📏</span><span>Valores referencia</span></div>
+    <div class="nav-item" onclick="nav('consejos')"><span class="ico">💡</span><span>Consejos</span><span class="nav-badge">IA</span></div>
+  </nav>
+  <div class="nav-bottom">
+    <div class="nav-item" onclick="nav('settings')"><span class="ico">⚙️</span><span>Ajustes</span></div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN CONTENT
+     ═══════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+<!-- ─── DASHBOARD ─── -->
+<div id="view-dash" class="view active">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub" id="dash-date"></div>
+    </div>
+  </div>
+  
+  <div id="alerts-container"></div>
+  
+  <div id="m-grid" class="metrics"></div>
+  
+  <div class="chart-card">
+    <div class="card-title">Evolución del colesterol</div>
+    <div class="card-sub">Histórico de todas tus analíticas</div>
+    <canvas id="main-chart" height="200"></canvas>
+  </div>
+  
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+    <div class="chart-card">
+      <div class="card-title">Ratio LDL/HDL</div>
+      <div class="card-sub">Indicador de riesgo cardiovascular</div>
+      <canvas id="ratio-chart" height="160"></canvas>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Triglicéridos</div>
+      <div class="card-sub">Evolución temporal</div>
+      <canvas id="trig-chart" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ─── NUEVA ANALÍTICA ─── -->
+<div id="view-nueva" class="view">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Nueva analítica</div>
+      <div class="page-sub">Registra los valores de tu análisis de sangre</div>
+    </div>
+  </div>
+  
+  <div class="chart-card">
+    <div class="form-grid">
+      <div class="fgrp">
+        <label class="flbl">📅 Fecha del análisis</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">🏥 Laboratorio</label>
+        <input type="text" id="f-lab" placeholder="Ej: Hospital Clínic">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Colesterol Total (mg/dL)</label>
+        <input type="number" id="f-total" placeholder="200" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">LDL - Colesterol malo (mg/dL)</label>
+        <input type="number" id="f-ldl" placeholder="130" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">HDL - Colesterol bueno (mg/dL)</label>
+        <input type="number" id="f-hdl" placeholder="50" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Triglicéridos (mg/dL)</label>
+        <input type="number" id="f-trig" placeholder="150" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Peso (kg) - opcional</label>
+        <input type="number" id="f-weight" placeholder="70" step="0.1">
+      </div>
+      <div class="fgrp fg-full">
+        <label class="flbl">📝 Notas adicionales</label>
+        <textarea id="f-notes" placeholder="Ej: En ayunas 12h, tomando estatinas..."></textarea>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="saveRecord()">💾 Guardar analítica</button>
+      <button class="btn" onclick="clearForm()">Limpiar</button>
+    </div>
+    <div id="f-msg" style="margin-top:12px;font-size:13px;"></div>
+  </div>
+</div>
+
+<!-- ─── HISTORIAL ─── -->
+<div id="view-hist" class="view">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Historial de analíticas</div>
+      <div class="page-sub">Todas tus mediciones registradas</div>
+    </div>
+  </div>
+  
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Total</th>
+          <th>LDL</th>
+          <th>HDL</th>
+          <th>Trigl.</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="t-body"></tbody>
+    </table>
+  </div>
+  <div id="no-records" class="empty">
+    <div class="empty-icon">📋</div>
+    <div class="empty-title">Sin analíticas registradas</div>
+    <div class="empty-text">Añade tu primera analítica para empezar a hacer seguimiento</div>
+  </div>
+</div>
+
+<!-- ─── VALORES DE REFERENCIA ─── -->
+<div id="view-ref" class="view">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Valores de referencia</div>
+      <div class="page-sub">Rangos saludables según la OMS y sociedades médicas</div>
+    </div>
+  </div>
+  
+  <div style="display:grid;gap:1rem;">
+    <div class="ref-card">
+      <div class="ref-title">🔴 Colesterol Total</div>
+      <div class="ref-row">
+        <span class="ref-label">Deseable</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:60%;background:var(--good);"></div></div>
+        <span class="ref-value" style="color:var(--good);">&lt; 200</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Límite alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:75%;background:var(--warn);"></div></div>
+        <span class="ref-value" style="color:var(--warn);">200-239</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:90%;background:var(--bad);"></div></div>
+        <span class="ref-value" style="color:var(--bad);">≥ 240</span>
+      </div>
+    </div>
+    
+    <div class="ref-card">
+      <div class="ref-title">🟠 LDL (Colesterol malo)</div>
+      <div class="ref-row">
+        <span class="ref-label">Óptimo</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:40%;background:var(--good);"></div></div>
+        <span class="ref-value" style="color:var(--good);">&lt; 100</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Casi óptimo</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:55%;background:#84cc16;"></div></div>
+        <span class="ref-value" style="color:#84cc16;">100-129</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Límite alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:70%;background:var(--warn);"></div></div>
+        <span class="ref-value" style="color:var(--warn);">130-159</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="ref-value" style="color:#f97316;">160-189</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Muy alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:95%;background:var(--bad);"></div></div>
+        <span class="ref-value" style="color:var(--bad);">≥ 190</span>
+      </div>
+    </div>
+    
+    <div class="ref-card">
+      <div class="ref-title">🟢 HDL (Colesterol bueno)</div>
+      <div class="ref-row">
+        <span class="ref-label">Bajo (riesgo)</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:30%;background:var(--bad);"></div></div>
+        <span class="ref-value" style="color:var(--bad);">&lt; 40</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Normal</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:60%;background:var(--warn);"></div></div>
+        <span class="ref-value" style="color:var(--warn);">40-59</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Óptimo (protector)</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:90%;background:var(--good);"></div></div>
+        <span class="ref-value" style="color:var(--good);">≥ 60</span>
+      </div>
+    </div>
+    
+    <div class="ref-card">
+      <div class="ref-title">🟡 Triglicéridos</div>
+      <div class="ref-row">
+        <span class="ref-label">Normal</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:50%;background:var(--good);"></div></div>
+        <span class="ref-value" style="color:var(--good);">&lt; 150</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Límite alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:70%;background:var(--warn);"></div></div>
+        <span class="ref-value" style="color:var(--warn);">150-199</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:85%;background:#f97316;"></div></div>
+        <span class="ref-value" style="color:#f97316;">200-499</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Muy alto</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:95%;background:var(--bad);"></div></div>
+        <span class="ref-value" style="color:var(--bad);">≥ 500</span>
+      </div>
+    </div>
+    
+    <div class="ref-card">
+      <div class="ref-title">📊 Ratio LDL/HDL (Riesgo cardiovascular)</div>
+      <div class="ref-row">
+        <span class="ref-label">Óptimo</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:40%;background:var(--good);"></div></div>
+        <span class="ref-value" style="color:var(--good);">&lt; 2.0</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Bueno</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:55%;background:#84cc16;"></div></div>
+        <span class="ref-value" style="color:#84cc16;">2.0-3.0</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Moderado</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:70%;background:var(--warn);"></div></div>
+        <span class="ref-value" style="color:var(--warn);">3.0-4.0</span>
+      </div>
+      <div class="ref-row">
+        <span class="ref-label">Alto riesgo</span>
+        <div class="ref-bar"><div class="ref-fill" style="width:90%;background:var(--bad);"></div></div>
+        <span class="ref-value" style="color:var(--bad);">&gt; 4.0</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── CONSEJOS IA ─── -->
+<div id="view-consejos" class="view">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Consejos personalizados</div>
+      <div class="page-sub">Recomendaciones basadas en tu historial</div>
+    </div>
+  </div>
+  
+  <div id="tips-container">
+    <div class="alert alert-info">
+      <span class="alert-icon">💡</span>
+      <div class="alert-content">
+        <div class="alert-title">Añade analíticas para obtener consejos</div>
+        <div class="alert-text">Registra al menos una analítica para recibir recomendaciones personalizadas basadas en tus valores.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── AJUSTES ─── -->
+<div id="view-settings" class="view">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Ajustes</div>
+      <div class="page-sub">Configuración y gestión de datos</div>
+    </div>
+  </div>
+  
+  <div class="settings-card">
+    <div class="settings-title">👤 Perfil</div>
+    <div class="form-grid" style="max-width:400px;">
+      <div class="fgrp">
+        <label class="flbl">Nombre</label>
+        <input type="text" id="s-name" placeholder="Tu nombre">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Año de nacimiento</label>
+        <input type="number" id="s-year" placeholder="1985">
+      </div>
+      <div class="fgrp fg-full">
+        <label class="flbl">Sexo</label>
+        <select id="s-sex">
+          <option value="">Seleccionar...</option>
+          <option value="M">Masculino</option>
+          <option value="F">Femenino</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:1rem;" onclick="saveProfile()">Guardar perfil</button>
+  </div>
+  
+  <div class="settings-card">
+    <div class="settings-title">📥 Exportar datos</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:1rem;">Descarga tus analíticas para backup o compartir con tu médico.</p>
+    <div class="export-btns">
+      <button class="btn" onclick="exportJSON()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descargar JSON
+      </button>
+      <button class="btn" onclick="exportCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        Descargar CSV
+      </button>
+      <button class="btn" onclick="exportJSONPretty()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+        JSON formateado
+      </button>
+    </div>
+  </div>
+  
+  <div class="settings-card">
+    <div class="settings-title">📤 Importar datos</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:1rem;">Restaura un backup previo o importa datos de otro dispositivo.</p>
+    <label class="btn" style="cursor:pointer;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+      Seleccionar archivo JSON
+      <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(event)">
+    </label>
+    <div id="import-msg" style="margin-top:8px;font-size:12px;"></div>
+  </div>
+  
+  <div class="settings-card" style="border-color:var(--bad-b);">
+    <div class="settings-title" style="color:var(--bad);">⚠️ Zona de peligro</div>
+    <p style="font-size:12px;color:var(--text3);margin-bottom:1rem;">Estas acciones no se pueden deshacer.</p>
+    <button class="btn btn-bad" onclick="clearAllData()">Borrar todos los datos</button>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MOBILE NAV
+     ═══════════════════════════════════════════════════════════════ -->
+<nav class="mobile-nav">
+  <div class="mn-item active" id="mn-dash" onclick="nav('dash')"><span class="mn-ico">📊</span>Dashboard</div>
+  <div class="mn-item" id="mn-nueva" onclick="nav('nueva')"><span class="mn-ico">➕</span>Nueva</div>
+  <div class="mn-item" id="mn-hist" onclick="nav('hist')"><span class="mn-ico">📋</span>Historial</div>
+  <div class="mn-item" id="mn-ref" onclick="nav('ref')"><span class="mn-ico">📏</span>Referencia</div>
+  <div class="mn-item" id="mn-settings" onclick="nav('settings')"><span class="mn-ico">⚙️</span>Ajustes</div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal" onclick="maybeCloseModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════
+let records = [];
+let profile = { name: '', year: '', sex: '' };
+let mainChart = null;
+let ratioChart = null;
+let trigChart = null;
+
+// Demo data
+const DEMO_DATA = [
+  { id: 1, date: '2024-01-15', lab: 'Hospital Clínic', total: 245, ldl: 165, hdl: 42, trig: 190, weight: 82, notes: 'Primera analítica del año' },
+  { id: 2, date: '2024-04-20', lab: 'Laboratorios Echevarne', total: 228, ldl: 148, hdl: 48, trig: 165, weight: 80, notes: 'Dieta mediterránea 3 meses' },
+  { id: 3, date: '2024-07-10', lab: 'Hospital Clínic', total: 212, ldl: 132, hdl: 52, trig: 145, weight: 78, notes: 'Ejercicio regular + dieta' },
+  { id: 4, date: '2024-10-05', lab: 'Laboratorios Echevarne', total: 198, ldl: 118, hdl: 58, trig: 125, weight: 76, notes: 'Mejora significativa!' },
+  { id: 5, date: '2025-01-12', lab: 'Hospital Clínic', total: 188, ldl: 105, hdl: 62, trig: 110, weight: 75, notes: 'Valores óptimos alcanzados' }
+];
+
+// ═══════════════════════════════════════════════════════════════
+// STORAGE
+// ═══════════════════════════════════════════════════════════════
+function loadData() {
+  try {
+    const saved = localStorage.getItem('cardiotrack_records');
+    records = saved ? JSON.parse(saved) : [...DEMO_DATA];
+    const savedProfile = localStorage.getItem('cardiotrack_profile');
+    if (savedProfile) profile = JSON.parse(savedProfile);
+  } catch (e) {
+    records = [...DEMO_DATA];
+  }
+}
+
+function saveData() {
+  localStorage.setItem('cardiotrack_records', JSON.stringify(records));
+}
+
+function saveProfileData() {
+  localStorage.setItem('cardiotrack_profile', JSON.stringify(profile));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function nav(page) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.mn-item').forEach(n => n.classList.remove('active'));
+  
+  document.getElementById('view-' + page).classList.add('active');
+  
+  const navItems = document.querySelectorAll('.nav-item');
+  const map = { dash: 0, nueva: 1, hist: 2, ref: 3, consejos: 4, settings: 5 };
+  if (map[page] !== undefined && navItems[map[page]]) {
+    navItems[map[page]].classList.add('active');
+  }
+  
+  const mnEl = document.getElementById('mn-' + page);
+  if (mnEl) mnEl.classList.add('active');
+  
+  if (page === 'dash') renderDashboard();
+  if (page === 'hist') renderHistory();
+  if (page === 'consejos') renderTips();
+  if (page === 'settings') loadProfileUI();
+  
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function getStatus(type, value) {
+  const ranges = {
+    total: { good: 200, warn: 239 },
+    ldl: { good: 100, warn: 159 },
+    hdl: { good: 60, warn: 40, inverse: true },
+    trig: { good: 150, warn: 199 }
+  };
+  
+  const r = ranges[type];
+  if (!r) return 'good';
+  
+  if (r.inverse) {
+    if (value >= r.good) return 'good';
+    if (value >= r.warn) return 'warn';
+    return 'bad';
+  }
+  
+  if (value < r.good) return 'good';
+  if (value <= r.warn) return 'warn';
+  return 'bad';
+}
+
+function getStatusLabel(type, value) {
+  const status = getStatus(type, value);
+  const labels = { good: 'Óptimo', warn: 'Límite', bad: 'Alto' };
+  if (type === 'hdl' && status === 'bad') return 'Bajo';
+  return labels[status];
+}
+
+function getRatio(ldl, hdl) {
+  if (!hdl || hdl === 0) return null;
+  return (ldl / hdl).toFixed(2);
+}
+
+function getRatioStatus(ratio) {
+  if (ratio < 2) return 'good';
+  if (ratio <= 3) return 'good';
+  if (ratio <= 4) return 'warn';
+  return 'bad';
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('dash-date').textContent = new Date().toLocaleDateString('es-ES', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+  });
+  
+  const grid = document.getElementById('m-grid');
+  const alerts = document.getElementById('alerts-container');
+  
+  if (records.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:2rem;color:var(--text3);">Añade tu primera analítica para ver tus métricas</div>';
+    alerts.innerHTML = '';
+    renderCharts([], [], []);
+    return;
+  }
+  
+  const sorted = [...records].sort((a, b) => new Date(b.date) - new Date(a.date));
+  const latest = sorted[0];
+  const prev = sorted[1];
+  
+  const change = (curr, old) => {
+    if (!old) return null;
+    return curr - old;
+  };
+  
+  const changeHTML = (val, inverse = false) => {
+    if (val === null) return '';
+    const isUp = val > 0;
+    const cls = inverse ? (isUp ? 'down' : 'up') : (isUp ? 'up' : 'down');
+    const arrow = isUp ? '↑' : '↓';
+    return `<div class="mc-change ${cls}">${arrow} ${Math.abs(val)}</div>`;
+  };
+  
+  const ratio = getRatio(latest.ldl, latest.hdl);
+  
+  grid.innerHTML = `
+    <div class="mc">
+      <div class="mc-lbl">Colesterol Total</div>
+      <div class="mc-val ${getStatus('total', latest.total)}">${latest.total}<span class="mc-unit">mg/dL</span></div>
+      ${changeHTML(change(latest.total, prev?.total))}
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">LDL (malo)</div>
+      <div class="mc-val ${getStatus('ldl', latest.ldl)}">${latest.ldl}<span class="mc-unit">mg/dL</span></div>
+      ${changeHTML(change(latest.ldl, prev?.ldl))}
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">HDL (bueno)</div>
+      <div class="mc-val ${getStatus('hdl', latest.hdl)}">${latest.hdl}<span class="mc-unit">mg/dL</span></div>
+      ${changeHTML(change(latest.hdl, prev?.hdl), true)}
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Triglicéridos</div>
+      <div class="mc-val ${getStatus('trig', latest.trig)}">${latest.trig}<span class="mc-unit">mg/dL</span></div>
+      ${changeHTML(change(latest.trig, prev?.trig))}
+    </div>
+    <div class="mc">
+      <div class="mc-lbl">Ratio LDL/HDL</div>
+      <div class="mc-val ${getRatioStatus(ratio)}">${ratio || '—'}</div>
+    </div>
+  `;
+  
+  // Generate alerts
+  let alertsHTML = '';
+  
+  if (getStatus('total', latest.total) === 'bad') {
+    alertsHTML += `<div class="alert alert-bad"><span class="alert-icon">⚠️</span><div class="alert-content"><div class="alert-title">Colesterol total elevado</div><div class="alert-text">Tu colesterol total está por encima de 240 mg/dL. Consulta con tu médico.</div></div></div>`;
+  }
+  
+  if (getStatus('ldl', latest.ldl) === 'bad') {
+    alertsHTML += `<div class="alert alert-bad"><span class="alert-icon">🔴</span><div class="alert-content"><div class="alert-title">LDL muy alto</div><div class="alert-text">El colesterol LDL elevado aumenta el riesgo cardiovascular. Considera cambios en la dieta y ejercicio.</div></div></div>`;
+  }
+  
+  if (getStatus('hdl', latest.hdl) === 'bad') {
+    alertsHTML += `<div class="alert alert-warn"><span class="alert-icon">🟡</span><div class="alert-content"><div class="alert-title">HDL bajo</div><div class="alert-text">El colesterol HDL bajo reduce la protección cardiovascular. El ejercicio aeróbico puede ayudar a subirlo.</div></div></div>`;
+  }
+  
+  if (prev && latest.total < prev.total) {
+    alertsHTML += `<div class="alert alert-good"><span class="alert-icon">✅</span><div class="alert-content"><div class="alert-title">¡Mejora detectada!</div><div class="alert-text">Tu colesterol total ha bajado ${prev.total - latest.total} mg/dL desde la última analítica. ¡Sigue así!</div></div></div>`;
+  }
+  
+  alerts.innerHTML = alertsHTML;
+  
+  // Render charts
+  const chartData = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
+  renderCharts(chartData);
+}
+
+function renderCharts(data) {
+  const ctx1 = document.getElementById('main-chart').getContext('2d');
+  const ctx2 = document.getElementById('ratio-chart').getContext('2d');
+  const ctx3 = document.getElementById('trig-chart').getContext('2d');
+  
+  if (mainChart) mainChart.destroy();
+  if (ratioChart) ratioChart.destroy();
+  if (trigChart) trigChart.destroy();
+  
+  if (!data || data.length === 0) {
+    [ctx1, ctx2, ctx3].forEach(ctx => {
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.font = '13px sans-serif';
+      ctx.fillStyle = '#718096';
+      ctx.textAlign = 'center';
+      ctx.fillText('Sin datos disponibles', ctx.canvas.width / 2, 80);
+    });
+    return;
+  }
+  
+  const labels = data.map(d => formatDate(d.date));
+  
+  mainChart = new Chart(ctx1, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Total', data: data.map(d => d.total), borderColor: '#dc2626', backgroundColor: 'rgba(220,38,38,0.1)', fill: true, tension: 0.3 },
+        { label: 'LDL', data: data.map(d => d.ldl), borderColor: '#f97316', backgroundColor: 'transparent', tension: 0.3 },
+        { label: 'HDL', data: data.map(d => d.hdl), borderColor: '#059669', backgroundColor: 'transparent', tension: 0.3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20 } } },
+      scales: {
+        y: { beginAtZero: false, grid: { color: 'rgba(0,0,0,0.05)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+  
+  ratioChart = new Chart(ctx2, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Ratio LDL/HDL',
+        data: data.map(d => getRatio(d.ldl, d.hdl)),
+        borderColor: '#8b5cf6',
+        backgroundColor: 'rgba(139,92,246,0.1)',
+        fill: true,
+        tension: 0.3
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 5, grid: { color: 'rgba(0,0,0,0.05)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+  
+  trigChart = new Chart(ctx3, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Triglicéridos',
+        data: data.map(d => d.trig),
+        backgroundColor: data.map(d => {
+          const s = getStatus('trig', d.trig);
+          return s === 'good' ? 'rgba(5,150,105,0.7)' : s === 'warn' ? 'rgba(217,119,6,0.7)' : 'rgba(220,38,38,0.7)';
+        }),
+        borderRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════════════
+function renderHistory() {
+  const tbody = document.getElementById('t-body');
+  const empty = document.getElementById('no-records');
+  
+  if (records.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  
+  empty.style.display = 'none';
+  const sorted = [...records].sort((a, b) => new Date(b.date) - new Date(a.date));
+  
+  tbody.innerHTML = sorted.map(r => {
+    const overallStatus = [
+      getStatus('total', r.total),
+      getStatus('ldl', r.ldl),
+      getStatus('hdl', r.hdl),
+      getStatus('trig', r.trig)
+    ].includes('bad') ? 'bad' : 
+    [getStatus('total', r.total), getStatus('ldl', r.ldl), getStatus('hdl', r.hdl), getStatus('trig', r.trig)].includes('warn') ? 'warn' : 'good';
+    
+    const statusLabels = { good: 'Óptimo', warn: 'Atención', bad: 'Revisar' };
+    
+    return `<tr>
+      <td style="font-weight:600;">${formatDate(r.date)}</td>
+      <td style="color:${getStatus('total', r.total) === 'good' ? 'var(--good)' : getStatus('total', r.total) === 'warn' ? 'var(--warn)' : 'var(--bad)'};">${r.total}</td>
+      <td style="color:${getStatus('ldl', r.ldl) === 'good' ? 'var(--good)' : getStatus('ldl', r.ldl) === 'warn' ? 'var(--warn)' : 'var(--bad)'};">${r.ldl}</td>
+      <td style="color:${getStatus('hdl', r.hdl) === 'good' ? 'var(--good)' : getStatus('hdl', r.hdl) === 'warn' ? 'var(--warn)' : 'var(--bad)'};">${r.hdl}</td>
+      <td>${r.trig || '—'}</td>
+      <td><span class="badge badge-${overallStatus}">${statusLabels[overallStatus]}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-sm btn-icon" onclick="viewRecord(${r.id})" title="Ver detalles">👁</button>
+        <button class="btn btn-sm btn-icon btn-accent" onclick="editRecord(${r.id})" title="Editar">✏️</button>
+        <button class="btn btn-sm btn-icon btn-bad" onclick="deleteRecord(${r.id})" title="Eliminar">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FORM ACTIONS
+// ═══════════════════════════════════════════════════════════════
+function saveRecord() {
+  const date = document.getElementById('f-date').value;
+  const total = parseInt(document.getElementById('f-total').value);
+  const ldl = parseInt(document.getElementById('f-ldl').value);
+  const hdl = parseInt(document.getElementById('f-hdl').value);
+  const msg = document.getElementById('f-msg');
+  
+  if (!date || !total || !ldl || !hdl) {
+    msg.innerHTML = '<span style="color:var(--bad);">⚠️ Completa al menos: fecha, colesterol total, LDL y HDL</span>';
+    return;
+  }
+  
+  const record = {
+    id: Date.now(),
+    date,
+    lab: document.getElementById('f-lab').value || '',
+    total,
+    ldl,
+    hdl,
+    trig: parseInt(document.getElementById('f-trig').value) || null,
+    weight: parseFloat(document.getElementById('f-weight').value) || null,
+    notes: document.getElementById('f-notes').value || ''
+  };
+  
+  records.push(record);
+  saveData();
+  clearForm();
+  
+  msg.innerHTML = '<span style="color:var(--good);">✅ Analítica guardada correctamente</span>';
+  setTimeout(() => msg.innerHTML = '', 3000);
+  
+  showToast('Analítica guardada');
+}
+
+function clearForm() {
+  ['f-date', 'f-lab', 'f-total', 'f-ldl', 'f-hdl', 'f-trig', 'f-weight', 'f-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  // Reset date to today
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+}
+
+function deleteRecord(id) {
+  if (!confirm('¿Eliminar esta analítica?')) return;
+  records = records.filter(r => r.id !== id);
+  saveData();
+  renderHistory();
+  showToast('Analítica eliminada');
+}
+
+function editRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  
+  openModal('Editar analítica', formatDate(r.date));
+  
+  document.getElementById('modal-body').innerHTML = `
+    <div class="form-grid">
+      <div class="fgrp">
+        <label class="flbl">📅 Fecha del análisis</label>
+        <input type="date" id="e-date" value="${r.date}">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">🏥 Laboratorio</label>
+        <input type="text" id="e-lab" value="${r.lab || ''}" placeholder="Ej: Hospital Clínic">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Colesterol Total (mg/dL)</label>
+        <input type="number" id="e-total" value="${r.total}" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">LDL - Colesterol malo (mg/dL)</label>
+        <input type="number" id="e-ldl" value="${r.ldl}" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">HDL - Colesterol bueno (mg/dL)</label>
+        <input type="number" id="e-hdl" value="${r.hdl}" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Triglicéridos (mg/dL)</label>
+        <input type="number" id="e-trig" value="${r.trig || ''}" step="1">
+      </div>
+      <div class="fgrp">
+        <label class="flbl">Peso (kg) - opcional</label>
+        <input type="number" id="e-weight" value="${r.weight || ''}" step="0.1">
+      </div>
+      <div class="fgrp fg-full">
+        <label class="flbl">📝 Notas adicionales</label>
+        <textarea id="e-notes" rows="3">${r.notes || ''}</textarea>
+      </div>
+    </div>
+    <div style="margin-top:1.25rem;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary" onclick="saveEditedRecord(${r.id})">💾 Guardar cambios</button>
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+    </div>
+    <div id="e-msg" style="margin-top:12px;font-size:13px;"></div>
+  `;
+}
+
+function saveEditedRecord(id) {
+  const date = document.getElementById('e-date').value;
+  const total = parseInt(document.getElementById('e-total').value);
+  const ldl = parseInt(document.getElementById('e-ldl').value);
+  const hdl = parseInt(document.getElementById('e-hdl').value);
+  const msg = document.getElementById('e-msg');
+  
+  if (!date || !total || !ldl || !hdl) {
+    msg.innerHTML = '<span style="color:var(--bad);">⚠️ Completa al menos: fecha, colesterol total, LDL y HDL</span>';
+    return;
+  }
+  
+  const idx = records.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  
+  records[idx] = {
+    ...records[idx],
+    date,
+    lab: document.getElementById('e-lab').value || '',
+    total,
+    ldl,
+    hdl,
+    trig: parseInt(document.getElementById('e-trig').value) || null,
+    weight: parseFloat(document.getElementById('e-weight').value) || null,
+    notes: document.getElementById('e-notes').value || ''
+  };
+  
+  saveData();
+  closeModal();
+  renderHistory();
+  renderDashboard();
+  showToast('Analítica actualizada');
+}
+
+function viewRecord(id) {
+  const r = records.find(x => x.id === id);
+  if (!r) return;
+  
+  openModal('Detalle de analítica', formatDate(r.date));
+  
+  const ratio = getRatio(r.ldl, r.hdl);
+  
+  document.getElementById('modal-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+      <div class="mc">
+        <div class="mc-lbl">Colesterol Total</div>
+        <div class="mc-val ${getStatus('total', r.total)}">${r.total}<span class="mc-unit">mg/dL</span></div>
+      </div>
+      <div class="mc">
+        <div class="mc-lbl">LDL</div>
+        <div class="mc-val ${getStatus('ldl', r.ldl)}">${r.ldl}<span class="mc-unit">mg/dL</span></div>
+      </div>
+      <div class="mc">
+        <div class="mc-lbl">HDL</div>
+        <div class="mc-val ${getStatus('hdl', r.hdl)}">${r.hdl}<span class="mc-unit">mg/dL</span></div>
+      </div>
+      <div class="mc">
+        <div class="mc-lbl">Triglicéridos</div>
+        <div class="mc-val ${r.trig ? getStatus('trig', r.trig) : ''}">${r.trig || '—'}<span class="mc-unit">mg/dL</span></div>
+      </div>
+      <div class="mc">
+        <div class="mc-lbl">Ratio LDL/HDL</div>
+        <div class="mc-val ${getRatioStatus(ratio)}">${ratio}</div>
+      </div>
+    </div>
+    ${r.lab ? `<p style="font-size:12px;color:var(--text3);margin-bottom:8px;">🏥 ${r.lab}</p>` : ''}
+    ${r.weight ? `<p style="font-size:12px;color:var(--text3);margin-bottom:8px;">⚖️ Peso: ${r.weight} kg</p>` : ''}
+    ${r.notes ? `<p style="font-size:12px;color:var(--text2);background:var(--bg3);padding:12px;border-radius:var(--radius);">📝 ${r.notes}</p>` : ''}
+    <div style="margin-top:1rem;display:flex;gap:10px;">
+      <button class="btn btn-accent" onclick="closeModal();editRecord(${r.id})">✏️ Editar</button>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TIPS
+// ═══════════════════════════════════════════════════════════════
+function renderTips() {
+  const container = document.getElementById('tips-container');
+  
+  if (records.length === 0) {
+    container.innerHTML = `
+      <div class="alert alert-info">
+        <span class="alert-icon">💡</span>
+        <div class="alert-content">
+          <div class="alert-title">Añade analíticas para obtener consejos</div>
+          <div class="alert-text">Registra al menos una analítica para recibir recomendaciones personalizadas.</div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+  
+  const latest = [...records].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+  let tips = [];
+  
+  // LDL tips
+  if (latest.ldl >= 160) {
+    tips.push({
+      type: 'bad',
+      icon: '🔴',
+      title: 'Reduce el LDL con cambios en la dieta',
+      text: 'Evita grasas saturadas (carnes rojas, lácteos enteros, fritos). Aumenta fibra soluble (avena, legumbres, frutas). Considera incluir esteroles vegetales.'
+    });
+  } else if (latest.ldl >= 130) {
+    tips.push({
+      type: 'warn',
+      icon: '🟠',
+      title: 'Mantén vigilado tu LDL',
+      text: 'Limita los alimentos procesados y las grasas trans. La dieta mediterránea es ideal para mantener el LDL bajo control.'
+    });
+  }
+  
+  // HDL tips
+  if (latest.hdl < 40) {
+    tips.push({
+      type: 'bad',
+      icon: '💪',
+      title: 'Sube tu HDL con ejercicio',
+      text: 'El ejercicio aeróbico (caminar, nadar, ciclismo) 30 min/día puede aumentar el HDL un 5-10%. Evita el tabaco y el alcohol en exceso.'
+    });
+  } else if (latest.hdl >= 60) {
+    tips.push({
+      type: 'good',
+      icon: '✅',
+      title: '¡Excelente HDL!',
+      text: 'Tu colesterol bueno está en nivel protector. Mantén tu rutina de ejercicio y alimentación saludable.'
+    });
+  }
+  
+  // Triglicéridos
+  if (latest.trig && latest.trig >= 200) {
+    tips.push({
+      type: 'warn',
+      icon: '🍬',
+      title: 'Reduce los triglicéridos',
+      text: 'Limita azúcares simples, alcohol y carbohidratos refinados. Los ácidos grasos omega-3 (pescado azul, nueces) ayudan a bajarlos.'
+    });
+  }
+  
+  // General tips
+  tips.push({
+    type: 'info',
+    icon: '🥗',
+    title: 'Dieta mediterránea',
+    text: 'Aceite de oliva virgen extra, pescado azul 2-3 veces/semana, frutas, verduras, legumbres y frutos secos. Reduce carnes rojas y procesados.'
+  });
+  
+  tips.push({
+    type: 'info',
+    icon: '🏃',
+    title: 'Ejercicio regular',
+    text: '150 minutos semanales de actividad aeróbica moderada. Incluso caminar 30 min/día tiene beneficios significativos.'
+  });
+  
+  container.innerHTML = tips.map(t => `
+    <div class="alert alert-${t.type}">
+      <span class="alert-icon">${t.icon}</span>
+      <div class="alert-content">
+        <div class="alert-title">${t.title}</div>
+        <div class="alert-text">${t.text}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// AI ANALYSIS
+// ═══════════════════════════════════════════════════════════════
+function openAIAnalysis() {
+  if (records.length === 0) {
+    showToast('Añade analíticas primero');
+    return;
+  }
+  
+  openModal('🤖 Análisis IA', 'Resumen de tu evolución');
+  
+  const sorted = [...records].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const first = sorted[0];
+  const latest = sorted[sorted.length - 1];
+  
+  const totalChange = latest.total - first.total;
+  const ldlChange = latest.ldl - first.ldl;
+  const hdlChange = latest.hdl - first.hdl;
+  
+  let analysis = '';
+  
+  // Tendencia general
+  if (totalChange < -20 && ldlChange < -15) {
+    analysis += `<div class="alert alert-good"><span class="alert-icon">🎉</span><div class="alert-content"><div class="alert-title">¡Excelente progreso!</div><div class="alert-text">Has reducido tu colesterol total en ${Math.abs(totalChange)} mg/dL y tu LDL en ${Math.abs(ldlChange)} mg/dL. Los cambios que estás haciendo están funcionando.</div></div></div>`;
+  } else if (totalChange > 20) {
+    analysis += `<div class="alert alert-bad"><span class="alert-icon">⚠️</span><div class="alert-content"><div class="alert-title">Tendencia preocupante</div><div class="alert-text">Tu colesterol ha aumentado ${totalChange} mg/dL. Te recomendamos consultar con tu médico y revisar hábitos de alimentación y ejercicio.</div></div></div>`;
+  }
+  
+  // HDL
+  if (hdlChange > 10) {
+    analysis += `<div class="alert alert-good"><span class="alert-icon">💪</span><div class="alert-content"><div class="alert-title">HDL en aumento</div><div class="alert-text">Tu colesterol bueno ha subido ${hdlChange} mg/dL. ¡El ejercicio está dando resultados!</div></div></div>`;
+  }
+  
+  // Ratio
+  const firstRatio = getRatio(first.ldl, first.hdl);
+  const latestRatio = getRatio(latest.ldl, latest.hdl);
+  
+  if (latestRatio < firstRatio) {
+    analysis += `<div class="alert alert-good"><span class="alert-icon">📊</span><div class="alert-content"><div class="alert-title">Ratio LDL/HDL mejorado</div><div class="alert-text">Tu ratio ha pasado de ${firstRatio} a ${latestRatio}, lo que indica menor riesgo cardiovascular.</div></div></div>`;
+  }
+  
+  // Resumen
+  analysis += `
+    <div style="background:var(--bg3);padding:1rem;border-radius:var(--radius);margin-top:1rem;">
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;">📈 Resumen de evolución</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        • Total: ${first.total} → ${latest.total} (${totalChange > 0 ? '+' : ''}${totalChange})<br>
+        • LDL: ${first.ldl} → ${latest.ldl} (${ldlChange > 0 ? '+' : ''}${ldlChange})<br>
+        • HDL: ${first.hdl} → ${latest.hdl} (${hdlChange > 0 ? '+' : ''}${hdlChange})<br>
+        • Ratio: ${firstRatio} → ${latestRatio}<br>
+        • Analíticas: ${records.length} en ${Math.ceil((new Date(latest.date) - new Date(first.date)) / (1000 * 60 * 60 * 24 * 30))} meses
+      </div>
+    </div>
+  `;
+  
+  document.getElementById('modal-body').innerHTML = analysis;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════════
+function exportJSON() {
+  const data = { records, profile, exportDate: new Date().toISOString() };
+  download('cardiotrack_backup.json', 'application/json', JSON.stringify(data));
+  showToast('JSON descargado');
+}
+
+function exportJSONPretty() {
+  const data = { records, profile, exportDate: new Date().toISOString() };
+  download('cardiotrack_backup_formatted.json', 'application/json', JSON.stringify(data, null, 2));
+  showToast('JSON formateado descargado');
+}
+
+function exportCSV() {
+  const headers = 'Fecha,Laboratorio,Total,LDL,HDL,Triglicéridos,Glucosa,Peso,Notas';
+  const rows = records.map(r => 
+    [r.date, r.lab || '', r.total, r.ldl, r.hdl, r.trig || '', r.glucose || '', r.weight || '', `"${(r.notes || '').replace(/"/g, "'")}""`].join(',')
+  );
+  download('cardiotrack_datos.csv', 'text/csv', [headers, ...rows].join('\n'));
+  showToast('CSV descargado');
+}
+
+function importJSON(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  const msg = document.getElementById('import-msg');
+  const reader = new FileReader();
+  
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      
+      if (data.records && Array.isArray(data.records)) {
+        const existingIds = new Set(records.map(r => r.id));
+        const newRecords = data.records.filter(r => r.id && !existingIds.has(r.id));
+        records = [...records, ...newRecords];
+        saveData();
+        
+        if (data.profile) {
+          profile = { ...profile, ...data.profile };
+          saveProfileData();
+        }
+        
+        msg.innerHTML = `<span style="color:var(--good);">✅ Importadas ${newRecords.length} analíticas nuevas</span>`;
+        showToast(`${newRecords.length} analíticas importadas`);
+      } else {
+        throw new Error('Formato inválido');
+      }
+    } catch (err) {
+      msg.innerHTML = `<span style="color:var(--bad);">❌ Error: ${err.message}</span>`;
+    }
+  };
+  
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function download(filename, type, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename;
+  a.click();
+}
+
+function clearAllData() {
+  if (!confirm('⚠️ ¿Borrar TODOS los datos? Esta acción no se puede deshacer.')) return;
+  if (!confirm('¿Estás seguro? Se eliminarán todas las analíticas.')) return;
+  
+  records = [];
+  profile = { name: '', year: '', sex: '' };
+  saveData();
+  saveProfileData();
+  
+  showToast('Datos eliminados');
+  nav('dash');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PROFILE
+// ═══════════════════════════════════════════════════════════════
+function loadProfileUI() {
+  document.getElementById('s-name').value = profile.name || '';
+  document.getElementById('s-year').value = profile.year || '';
+  document.getElementById('s-sex').value = profile.sex || '';
+}
+
+function saveProfile() {
+  profile.name = document.getElementById('s-name').value;
+  profile.year = document.getElementById('s-year').value;
+  profile.sex = document.getElementById('s-sex').value;
+  saveProfileData();
+  showToast('Perfil guardado');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL
+// ═══════════════════════════════════════════════════════════════
+function openModal(title, sub) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-sub').textContent = sub;
+  document.getElementById('modal-body').innerHTML = '';
+  document.getElementById('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function maybeCloseModal(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+loadData();
+renderDashboard();
+
+// Set default date to today
+document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
